@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Hanken_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
+import { SnackbarProvider } from "@/components/snackbar";
+
 const bodyFont = Inter({
   variable: "--font-body",
   subsets: ["latin"],
@@ -40,7 +42,7 @@ export default function RootLayout({
       <body
         className={`${bodyFont.variable} ${displayFont.variable} ${monoFont.variable}`}
       >
-        {children}
+        <SnackbarProvider>{children}</SnackbarProvider>
       </body>
     </html>
   );

@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { LoadingSignal } from "@/components/loading-signal";
+import { useSnackbar } from "@/components/snackbar";
 import {
   fetchPapers,
   type PaperRow,
@@ -25,7 +27,13 @@ const VISIBLE_KEYS = [
   "abstract",
   "pdf_url",
   "source_type",
+  "extraction_completed_at",
 ] as const;
+
+const DATE_KEYS: ReadonlySet<string> = new Set([
+  "extraction_completed_at",
+  "created_at",
+]);
 
 type EditForm = {
   title: string;
@@ -43,6 +51,17 @@ const toCellText = (value: unknown) => {
   if (typeof value === "string") return value;
   return JSON.stringify(value);
 };
+
+const formatDateText = (value: unknown) => {
+  if (typeof value !== "string" || !value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+const toDisplayText = (column: string, value: unknown) =>
+  DATE_KEYS.has(column) ? formatDateText(value) : toCellText(value);
 
 const toEditForm = (row: PaperRow): EditForm => {
   const authors =
@@ -82,6 +101,7 @@ export default function PapersTableManager({
   const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
   const [pendingSaveRow, setPendingSaveRow] = useState<PaperRow | null>(null);
   const saveInFlightRef = useRef(false);
+  const { showSnackbar } = useSnackbar();
   const [editForm, setEditForm] = useState<EditForm>({
     title: "",
     authorsText: "",
@@ -136,11 +156,13 @@ export default function PapersTableManager({
     setSaving(true);
     try {
       await updatePaper(row);
+      showSnackbar("Paper updated successfully.", "success");
       await load();
     } catch (saveError) {
-      setError(
-        saveError instanceof Error ? saveError.message : "Update failed",
-      );
+      const message =
+        saveError instanceof Error ? saveError.message : "Update failed";
+      setError(message);
+      showSnackbar(message, "error");
     } finally {
       saveInFlightRef.current = false;
       setSaving(false);
@@ -257,8 +279,11 @@ export default function PapersTableManager({
               >
                 {columns.map((column) => (
                   <td key={column}>
-                    <div className="soales-table-cell" title={toCellText(row[column])}>
-                      {toCellText(row[column])}
+                    <div
+                      className="soales-table-cell"
+                      title={toDisplayText(column, row[column])}
+                    >
+                      {toDisplayText(column, row[column])}
                     </div>
                   </td>
                 ))}
@@ -434,31 +459,36 @@ export default function PapersTableManager({
         </div>
       ) : null}
 
-      {confirmSaveOpen ? (
-        <div className="ui-fade-in fixed inset-0 z-40 grid place-items-center bg-[#060e20]/25 px-4 backdrop-blur-[2px]">
-          <div className="soales-panel ui-pop w-full max-w-md p-5">
-            <p className="text-sm text-[#dae2fd]">Approve the edited data?</p>
-            <div className="mt-4 flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={confirmSave}
-                disabled={saving}
-                className="soales-button-primary disabled:opacity-70"
-              >
-                {saving ? "Saving..." : "Approve"}
-              </button>
-              <button
-                type="button"
-                onClick={cancelSaveConfirm}
-                disabled={saving}
-                className="soales-button-secondary disabled:opacity-70"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {confirmSaveOpen
+        ? createPortal(
+            <div className="ui-fade-in fixed inset-0 z-40 grid place-items-center bg-[#060e20]/25 px-4 backdrop-blur-[2px]">
+              <div className="soales-panel ui-pop w-full max-w-md p-5">
+                <p className="text-sm text-[#dae2fd]">
+                  Approve the edited data?
+                </p>
+                <div className="mt-4 flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={confirmSave}
+                    disabled={saving}
+                    className="soales-button-primary disabled:opacity-70"
+                  >
+                    {saving ? "Saving..." : "Approve"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={cancelSaveConfirm}
+                    disabled={saving}
+                    className="soales-button-secondary disabled:opacity-70"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
 
     </section>
   );

@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 
+import { useSnackbar } from "@/components/snackbar";
 import { uploadDocument } from "@/lib/paper-review-api";
 
 type UploadStatus = "idle" | "uploading" | "success" | "error";
@@ -35,6 +36,7 @@ export function UploadSessionProvider({
   const [message, setMessage] = useState("");
   const [vllmBaseUrl, setVllmBaseUrl] = useState("");
   const [vllmPort, setVllmPort] = useState("");
+  const { showSnackbar } = useSnackbar();
 
   const startUpload = useCallback(
     async (params: {
@@ -51,12 +53,16 @@ export function UploadSessionProvider({
         setMessage(
           typeof payload === "string" ? payload : JSON.stringify(payload, null, 2),
         );
+        showSnackbar("PDF uploaded and queued for extraction.", "success");
       } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Upload failed.";
         setStatus("error");
-        setMessage(error instanceof Error ? error.message : "Upload failed.");
+        setMessage(errorMessage);
+        showSnackbar(errorMessage, "error");
       }
     },
-    [],
+    [showSnackbar],
   );
 
   const value = useMemo(
