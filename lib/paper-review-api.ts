@@ -31,18 +31,30 @@ const UPDATE_PAPERS_PATH = apiPath("paper_review", "update", "paper");
 const FETCH_JOBS_PATH = apiPath("jobs");
 const FETCH_JOB_PATH = (jobId: string) => apiPath("jobs", jobId);
 
-const buildUrl = (path: string) => `${API_BASE_URL}${joinPath(path)}`;
+/** Absolute (http://...) or same-origin relative (/api/v1/...). */
+const buildUrl = (path: string) => {
+  const normalized = joinPath(path);
+  return API_BASE_URL ? `${API_BASE_URL}${normalized}` : normalized;
+};
+
+const withQuery = (
+  path: string,
+  query: Record<string, string | number>,
+): string => {
+  const params = new URLSearchParams();
+  Object.entries(query).forEach(([key, value]) => {
+    params.set(key, String(value));
+  });
+  const qs = params.toString();
+  const base = buildUrl(path);
+  return qs ? `${base}?${qs}` : base;
+};
 
 const getWithQuery = async (
   path: string,
   query: Record<string, string | number>,
 ) => {
-  const url = new URL(buildUrl(path));
-  Object.entries(query).forEach(([key, value]) => {
-    url.searchParams.set(key, String(value));
-  });
-
-  const response = await fetch(url.toString(), {
+  const response = await fetch(withQuery(path, query), {
     method: "GET",
   });
 
@@ -85,12 +97,7 @@ const postJsonWithQuery = async (
   query: Record<string, string | number>,
   body: unknown,
 ) => {
-  const url = new URL(buildUrl(path));
-  Object.entries(query).forEach(([key, value]) => {
-    url.searchParams.set(key, String(value));
-  });
-
-  const response = await fetch(url.toString(), {
+  const response = await fetch(withQuery(path, query), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
