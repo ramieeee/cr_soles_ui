@@ -3,14 +3,16 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
-RUN corepack enable
+ENV CI=true
+RUN corepack enable && corepack prepare pnpm@10.26.2 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN pnpm install --frozen-lockfile
 
 FROM node:22-alpine AS builder
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
-RUN corepack enable
+ENV CI=true
+RUN corepack enable && corepack prepare pnpm@10.26.2 --activate
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
