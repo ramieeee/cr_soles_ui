@@ -35,22 +35,82 @@ const VISIBLE_KEYS = [
 const DATE_KEYS: ReadonlySet<string> = new Set([
   "extraction_completed_at",
   "created_at",
+  "updated_at",
+  "reviewed_at",
 ]);
 
-const EXTRACTION_SUMMARY_FIELDS: readonly {
-  key: string;
-  label: string;
+const EXTRACTION_SECTIONS: readonly {
+  title: string;
+  fields: readonly { key: keyof ExtractionRow; label: string }[];
 }[] = [
-  { key: "extraction_version", label: "Version" },
-  { key: "created_at", label: "Extracted at" },
-  { key: "human_review_status", label: "Review status" },
-  { key: "overall_confidence", label: "Overall confidence" },
-  { key: "population_description", label: "Population" },
-  { key: "country", label: "Country" },
-  { key: "sample_size", label: "Sample size" },
-  { key: "study_design", label: "Study design" },
-  { key: "main_finding_summary", label: "Main finding" },
+  {
+    title: "Meta",
+    fields: [
+      { key: "extraction_version", label: "Version" },
+      { key: "created_at", label: "Extracted at" },
+      { key: "updated_at", label: "Updated at" },
+      { key: "human_review_status", label: "Review status" },
+      { key: "overall_confidence", label: "Overall confidence" },
+    ],
+  },
+  {
+    title: "Eligibility",
+    fields: [
+      { key: "meets_target_criteria", label: "Meets target criteria" },
+      { key: "eligibility_confidence", label: "Eligibility confidence" },
+      { key: "exclusion_reason", label: "Exclusion reason" },
+    ],
+  },
+  {
+    title: "Study characteristics",
+    fields: [
+      { key: "study_design", label: "Study design" },
+      { key: "sample_size", label: "Sample size (N)" },
+      { key: "population_description", label: "Population" },
+      { key: "country", label: "Country" },
+    ],
+  },
+  {
+    title: "Brain measure",
+    fields: [
+      { key: "brain_measure_present", label: "Present" },
+      { key: "brain_measure_category", label: "Category" },
+      { key: "brain_measure_description", label: "Description" },
+    ],
+  },
+  {
+    title: "Cognition measure",
+    fields: [
+      { key: "cognition_measure_present", label: "Present" },
+      { key: "cognitive_domain", label: "Domain" },
+      { key: "cognition_measure_description", label: "Description" },
+    ],
+  },
+  {
+    title: "Reserve / moderator",
+    fields: [
+      { key: "moderator_present", label: "Present" },
+      { key: "moderator_category", label: "Category" },
+      { key: "moderator_description", label: "Description" },
+    ],
+  },
+  {
+    title: "Analysis & results",
+    fields: [
+      { key: "statistical_approach", label: "Statistical approach" },
+      { key: "interaction_tested", label: "Interaction tested" },
+      { key: "interaction_description", label: "Interaction description" },
+      { key: "main_finding_summary", label: "Main finding" },
+    ],
+  },
 ];
+
+const formatExtractionValue = (key: keyof ExtractionRow, value: unknown) => {
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (DATE_KEYS.has(key)) return formatDateText(value);
+  if (typeof value === "number") return String(value);
+  return toCellText(value);
+};
 
 type EditForm = {
   title: string;
@@ -579,30 +639,41 @@ export default function PapersTableManager({
                       </p>
                     ) : extraction ? (
                       <>
-                        <dl className="grid gap-3">
-                          {EXTRACTION_SUMMARY_FIELDS.map(({ key, label }) => {
-                            const value = extraction[key];
-                            if (
-                              value === null ||
-                              value === undefined ||
-                              value === ""
-                            ) {
-                              return null;
-                            }
-                            return (
-                              <div key={key} className="grid gap-1">
-                                <dt className="soales-mono text-[10px] uppercase tracking-widest text-[#ccc3d8]">
-                                  {label}
-                                </dt>
-                                <dd className="text-sm leading-6 text-[#dae2fd]">
-                                  {DATE_KEYS.has(key)
-                                    ? formatDateText(value)
-                                    : toCellText(value)}
-                                </dd>
-                              </div>
-                            );
-                          })}
-                        </dl>
+                        {EXTRACTION_SECTIONS.map((section) => {
+                          const visibleFields = section.fields.filter(
+                            ({ key }) => {
+                              const value = extraction[key];
+                              return (
+                                value !== null &&
+                                value !== undefined &&
+                                value !== ""
+                              );
+                            },
+                          );
+                          if (!visibleFields.length) return null;
+                          return (
+                            <div key={section.title} className="grid gap-3">
+                              <p className="soales-mono text-[10px] uppercase tracking-widest text-[#ffb95f]">
+                                {section.title}
+                              </p>
+                              <dl className="grid gap-3">
+                                {visibleFields.map(({ key, label }) => (
+                                  <div key={key} className="grid gap-1">
+                                    <dt className="soales-mono text-[10px] uppercase tracking-widest text-[#ccc3d8]">
+                                      {label}
+                                    </dt>
+                                    <dd className="text-sm leading-6 text-[#dae2fd]">
+                                      {formatExtractionValue(
+                                        key,
+                                        extraction[key],
+                                      )}
+                                    </dd>
+                                  </div>
+                                ))}
+                              </dl>
+                            </div>
+                          );
+                        })}
 
                         {rawOutputJson ? (
                           <div className="grid gap-1">

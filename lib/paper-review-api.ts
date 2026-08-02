@@ -163,7 +163,40 @@ export const fetchPapers = async (offset: number, limit: number) => {
   return toRows(payload);
 };
 
-export type ExtractionRow = Record<string, unknown>;
+export type ExtractionRow = {
+  id?: string;
+  paper_id?: string;
+  run_id?: string | null;
+  extraction_version?: string;
+  is_current?: boolean;
+  meets_target_criteria?: boolean | null;
+  eligibility_confidence?: number | null;
+  exclusion_reason?: string | null;
+  brain_measure_present?: boolean | null;
+  brain_measure_description?: string | null;
+  brain_measure_category?: string | null;
+  cognition_measure_present?: boolean | null;
+  cognition_measure_description?: string | null;
+  cognitive_domain?: string | null;
+  moderator_present?: boolean | null;
+  moderator_description?: string | null;
+  moderator_category?: string | null;
+  interaction_tested?: boolean | null;
+  interaction_description?: string | null;
+  sample_size?: number | null;
+  population_description?: string | null;
+  study_design?: string | null;
+  country?: string | null;
+  statistical_approach?: string | null;
+  main_finding_summary?: string | null;
+  overall_confidence?: number | null;
+  human_review_status?: string;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  raw_output_json?: Record<string, unknown> | null;
+  created_at?: string;
+  updated_at?: string;
+};
 
 export const fetchPaperExtraction = async (
   paperId: string,
